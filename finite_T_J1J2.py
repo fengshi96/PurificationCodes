@@ -24,9 +24,9 @@ def energy_beta(psi, H_mpo):
     return (num / den).real
 
 
-def imag_apply_mpo(Lx=12, Ly=6, beta_max=10., dt=0.05, order=2, bc="finite", approx="II", J1=1.0, J2=1.0, Fz=1e-5, trunc_params=None):
+def imag_apply_mpo(Lx=6, Ly=6, beta_max=10., dt=0.05, order=2, bc="finite", approx="II", J1=1.0, J2=1.0, Fz=1e-5, trunc_params=None):
     # model_params for J1J2 model on triangular lattice
-    model_params = dict(Lx=Lx, Ly=Ly, order='default', J1=J1, J2=J2, Fz=Fz, bc_MPS='finite', conserve='Sz')
+    model_params = dict(Lx=Lx, Ly=Ly, order='default', J1=J1, J2=J2, Fz=Fz, bc_MPS='finite', conserve=None)
 
     # Default truncation parameters if not provided
     if trunc_params is None:
@@ -71,8 +71,8 @@ def imag_apply_mpo(Lx=12, Ly=6, beta_max=10., dt=0.05, order=2, bc="finite", app
 if __name__ == "__main__":
     import logging
     logging.basicConfig(level=logging.INFO)
-    trunc_params = {'chi_max': 120, 'chi_min': 10, 'svd_min': 1.e-8}
-    data_mpo = imag_apply_mpo(Lx=6, Ly=6, beta_max=20., J1=1.0, J2=0.125, Fz=0.0, trunc_params=trunc_params)
+    trunc_params = {'chi_max': 30, 'chi_min': 10, 'svd_min': 1.e-8}
+    data_mpo = imag_apply_mpo(Lx=4, Ly=6, beta_max=20., J1=1.0, J2=0.125, Fz=0.0, trunc_params=trunc_params)
 
     import numpy as np
     import matplotlib.pyplot as plt
