@@ -71,15 +71,19 @@ def measure_fluxes(psi, lattice, site='all'):
 
 
 
-def imag_apply_mpo(L=11, beta_max=10., dt=0.05, order=2, bc="finite", approx="II", h=1e-5):
+def imag_apply_mpo(L=11, beta_max=10., dt=0.05, order=2, bc="finite", approx="II", h=1e-5, trunc_params=None):
     # model_params = dict(Lx=L, order='default', J_K=1, Fx=1e-5, Fy=1e-5, Fz=1e-5, bc='open')
     model_params = dict(Lx=L, order='default', J_K=-1, Fx=h, Fy=h, Fz=h, bc='open')
+
+    # Default truncation parameters if not provided
+    if trunc_params is None:
+        trunc_params = {'chi_max': 30, 'chi_min': 10, 'svd_min': 1.e-8}
 
     # run DMRG
     M = Kitaev_Ladder(model_params)
 
     psi = PurificationMPS.from_infiniteT(M.lat.mps_sites(), bc=bc)
-    options = {'trunc_params': {'chi_max': 30, 'chi_min': 10, 'svd_min': 1.e-8}}
+    options = {'trunc_params': trunc_params}
     beta = 0.
     if order == 1:
         Us = [M.H_MPO.make_U(-dt, approx)]
