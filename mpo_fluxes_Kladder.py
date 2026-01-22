@@ -8,7 +8,7 @@ from tenpy.networks.site import SpinHalfSite
 from tenpy.models.model import CouplingMPOModel
 from tenpy.models.lattice import Honeycomb
 from tenpy.models.lattice import Ladder
-from energy_dynamics_ladder import measure_energy_densities
+from energy_dynamics_Kladder import measure_energy_densities
 import math
 
 
@@ -205,7 +205,7 @@ if __name__ == "__main__":
     from tenpy.tools import hdf5_io
     from tenpy.networks.mps import MPS, MPSEnvironment
     from tenpy.networks.mpo import MPOEnvironment
-    from model_ladder import Kitaev_Ladder
+    from model_Kladder import Kitaev_Ladder
     sys.argv ## get the input argument
     total = len(sys.argv)
     cmdargs = sys.argv

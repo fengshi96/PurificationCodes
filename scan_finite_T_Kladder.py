@@ -4,16 +4,9 @@ Scan finite-T calculations over different magnetic field strengths.
 import numpy as np
 import matplotlib.pyplot as plt
 import logging
-import importlib.util
-import sys
+from finite_T_Kladder import imag_apply_mpo
 
-# Import finite_T module (which has a hyphen in filename)
-spec = importlib.util.spec_from_file_location("finite_T", "finite-T.py")
-finite_T = importlib.util.module_from_spec(spec)
-sys.modules["finite_T"] = finite_T
-spec.loader.exec_module(finite_T)
 
-imag_apply_mpo = finite_T.imag_apply_mpo
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -120,7 +113,7 @@ if __name__ == "__main__":
     
     # Save all Cv data to files
     for h, (T, Cv) in results.items():
-        txt_filename = f"Cv-h{h:.2f}.txt"
+        txt_filename = f"./Data_AFM_Kitaev_Ladder/Cv-h{h:.2f}.txt"
         np.savetxt(txt_filename, np.column_stack([T, Cv]), fmt='%.6e', header='T\tCv')
         logger.info(f"Saved: {txt_filename}")
     
