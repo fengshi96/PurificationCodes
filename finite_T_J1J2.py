@@ -71,7 +71,8 @@ def imag_apply_mpo(Lx=12, Ly=6, beta_max=10., dt=0.05, order=2, bc="finite", app
 if __name__ == "__main__":
     import logging
     logging.basicConfig(level=logging.INFO)
-    data_mpo = imag_apply_mpo(Lx=24, Ly=6, beta_max=10., J1=1.0, J2=1.0, Fz=0.1)
+    trunc_params = {'chi_max': 120, 'chi_min': 10, 'svd_min': 1.e-8}
+    data_mpo = imag_apply_mpo(Lx=6, Ly=6, beta_max=20., J1=1.0, J2=0.125, Fz=0.0, trunc_params=trunc_params)
 
     import numpy as np
     import matplotlib.pyplot as plt
@@ -133,3 +134,7 @@ if __name__ == "__main__":
 
     plt.tight_layout()
     plt.savefig("./finite-T-J1J2.pdf", dpi=300, bbox_inches='tight')
+    
+    # Save Cv vs T to ASCII file
+    np.savetxt("Cv-J1J2.txt", np.column_stack([T, Cv]), header="T\tCv", fmt='%.6e')
+    print("Saved Cv vs T to Cv-J1J2.txt")
