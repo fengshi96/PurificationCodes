@@ -5,9 +5,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 import logging
 from finite_T_Kladder import imag_apply_mpo
-
-
-
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
