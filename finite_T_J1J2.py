@@ -25,7 +25,7 @@ def energy_beta(psi, H_mpo):
     return (num / den).real
 
 
-def imag_apply_mpo(Lx=6, Ly=6, beta_max=10., dt=0.05, order=2, bc="finite", approx="II", J1=1.0, J2=1.0, Fz=1e-5, conserve=None, trunc_params=None):
+def imag_apply_mpo(Lx=6, Ly=6, beta_max=10., dt=0.05, order=2, bc="finite", approx="II", J1=1.0, J2=1.0, Fz=1e-5, conserve=None, trunc_params=None, filename=None):
     # model_params for J1J2 model on triangular lattice
     model_params = dict(Lx=Lx, Ly=Ly, order='default', J1=J1, J2=J2, Fz=Fz, bc_MPS='finite', conserve=conserve)
 
@@ -72,6 +72,12 @@ def imag_apply_mpo(Lx=6, Ly=6, beta_max=10., dt=0.05, order=2, bc="finite", appr
         # Measure energy
         E = energy_beta(psi, M.H_MPO)
         Es.append(E)
+        
+        # Save data dynamically after each temperature step
+        if filename is not None:
+            data_dict = {'beta': betas, 'Sz': Szs, 'E': Es, 
+                        'chi_max': chi_max, 'Lx': Lx, 'Ly': Ly, 'J1': J1, 'J2': J2, 'Fz': Fz, 'total_sites': total_sites}
+            save_data_to_file(data_dict, Lx=Lx, Ly=Ly, J1=J1, J2=J2, Fz=Fz, chi_max=chi_max, filename=filename)
 
 
     return {'beta': betas, 'Sz': Szs, 'E': Es, 
@@ -174,13 +180,10 @@ if __name__ == "__main__":
     args = parser.parse_args()
     
     trunc_params = {'chi_max': args.chi_max, 'chi_min': 10, 'svd_min': 1.e-8}
-    data_mpo = imag_apply_mpo(Lx=args.Lx, Ly=args.Ly, dt=args.dt, beta_max=args.beta_max, J1=args.J1, J2=args.J2, Fz=args.Fz, conserve=args.conserve, trunc_params=trunc_params)
+    filename = f"Data_J1J2/finite_T_data_Lx{args.Lx}_Ly{args.Ly}_beta{args.beta_max:.1f}_dt{args.dt:.4f}_chi{args.chi_max}_J1{args.J1:.2f}_J2{args.J2:.4f}_Fz{args.Fz:.2f}_conserve{args.conserve}.txt"
+    data_mpo = imag_apply_mpo(Lx=args.Lx, Ly=args.Ly, dt=args.dt, beta_max=args.beta_max, J1=args.J1, J2=args.J2, Fz=args.Fz, conserve=args.conserve, trunc_params=trunc_params, filename=filename)
 
     import matplotlib.pyplot as plt
-    
-    # Save data to file
-    filename = f"Data_J1J2/finite_T_data_Lx{args.Lx}_Ly{args.Ly}_beta{args.beta_max:.1f}_dt{args.dt:.4f}_chi{data_mpo['chi_max']}_J1{args.J1:.2f}_J2{args.J2:.4f}_Fz{args.Fz:.2f}_conserve{args.conserve}.txt"
-    save_data_to_file(data_mpo, Lx=args.Lx, Ly=args.Ly, J1=args.J1, J2=args.J2, Fz=args.Fz, chi_max=data_mpo['chi_max'], filename=filename)
     
     fig, axes = plt.subplots(2, 2, figsize=(12, 8))
     

@@ -1,0 +1,6 @@
+# Finite Temperature Data for J1J2 Model
+# Lx=6, Ly=6, J1=1.0000, J2=0.1250, Fz=0.0000, chi_max=30
+# Columns: T | Sigmaz | Cv
+# 
+2.000000e+01	1.082026e-09	4.228124e-02
+1.000000e+01	4.629391e-09	1.579818e-01

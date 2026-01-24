@@ -72,7 +72,7 @@ def measure_fluxes(psi, lattice, site='all'):
 
 
 
-def imag_apply_mpo(L=11, beta_max=10., dt=0.05, order=2, bc="finite", approx="II", h=1e-5, trunc_params=None):
+def imag_apply_mpo(L=11, beta_max=10., dt=0.05, order=2, bc="finite", approx="II", h=1e-5, trunc_params=None, filename=None):
     # model_params = dict(Lx=L, order='default', J_K=1, Fx=1e-5, Fy=1e-5, Fz=1e-5, bc='open')
     model_params = dict(Lx=L, order='default', J_K=-1, Fx=h, Fy=h, Fz=h, bc='open')
 
@@ -129,6 +129,12 @@ def imag_apply_mpo(L=11, beta_max=10., dt=0.05, order=2, bc="finite", approx="II
         # Measure energy
         E = energy_beta(psi, M.H_MPO)
         Es.append(E)
+        
+        # Save data dynamically after each temperature step
+        if filename is not None:
+            data_dict = {'beta': betas, 'Sx': Sxs, 'Sy': Sys, 'Sz': Szs, 'S1': S1s, 'S2': S2s, 'Wp': Wps, 'E': Es, 
+                        'chi_max': chi_max, 'h': h, 'L': L, 'total_sites': total_sites, 'num_flux_ops': num_flux_ops}
+            save_data_to_file(data_dict, h=h, chi_max=chi_max, filename=filename)
 
 
     return {'beta': betas, 'Sx': Sxs, 'Sy': Sys, 'Sz': Szs, 'S1': S1s, 'S2': S2s, 'Wp': Wps, 'E': Es, 
@@ -237,14 +243,10 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     trunc_params = {'chi_max': args.chi_max, 'chi_min': 10, 'svd_min': 1.e-8}
+    filename = f"Data_AFM_Kitaev_Ladder/finite_T_data_L{args.L}_beta{args.beta_max:.1f}_dt{args.dt:.4f}_chi{args.chi_max}_h{args.h:.2f}.txt"
     data_mpo = imag_apply_mpo(L=args.L, beta_max=args.beta_max, dt=args.dt, order=2, bc="finite", approx="II", h=args.h, 
-                              trunc_params=trunc_params)
+                              trunc_params=trunc_params, filename=filename)
 
-    
-    # Save data to file
-    filename = f"Data_AFM_Kitaev_Ladder/finite_T_data_L{args.L}_beta{args.beta_max:.1f}_dt{args.dt:.4f}_chi{data_mpo['chi_max']}_h{data_mpo['h']:.2f}.txt"
-    save_data_to_file(data_mpo, h=data_mpo['h'], chi_max=data_mpo['chi_max'], filename=filename)
-    
     
     import matplotlib.pyplot as plt
     fig, axes = plt.subplots(2, 2, figsize=(12, 8))
