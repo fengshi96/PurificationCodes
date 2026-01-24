@@ -155,7 +155,7 @@ if __name__ == "__main__":
     - Generates and saves a matplotlib figure with 4 subplots showing temperature dependence
     
     Example usage:
-    $ python finite_T_J1J2.py --Lx 6 --Ly 6 --beta_max 20.0 --J1 1.0 --J2 0.125 --chi_max 100
+    $ python finite_T_J1J2.py --Lx 6 --Ly 6 --beta_max 20.0 --J1 1.0 --J2 0.125 --chi_max 100 --conserve=Sz
     """
     import argparse
     
@@ -169,16 +169,17 @@ if __name__ == "__main__":
     parser.add_argument('--J2', type=float, default=0.125, help='Next-nearest-neighbor coupling (default: 0.125)')
     parser.add_argument('--Fz', type=float, default=0.0, help='Magnetic field strength (default: 0.0)')
     parser.add_argument('--chi_max', type=int, default=30, help='Maximum bond dimension (default: 30)')
+    parser.add_argument('--conserve', type=str, default=None, help='Quantum number to conserve (default: None)')
     
     args = parser.parse_args()
     
     trunc_params = {'chi_max': args.chi_max, 'chi_min': 10, 'svd_min': 1.e-8}
-    data_mpo = imag_apply_mpo(Lx=args.Lx, Ly=args.Ly, dt=args.dt, beta_max=args.beta_max, J1=args.J1, J2=args.J2, Fz=args.Fz, conserve='Sz', trunc_params=trunc_params)
+    data_mpo = imag_apply_mpo(Lx=args.Lx, Ly=args.Ly, dt=args.dt, beta_max=args.beta_max, J1=args.J1, J2=args.J2, Fz=args.Fz, conserve=args.conserve, trunc_params=trunc_params)
 
     import matplotlib.pyplot as plt
     
     # Save data to file
-    filename = f"Data_J1J2/finite_T_data_Lx{args.Lx}_Ly{args.Ly}_beta{args.beta_max:.1f}_dt{args.dt:.4f}_chi{data_mpo['chi_max']}_J1{args.J1:.2f}_J2{args.J2:.4f}_Fz{args.Fz:.2f}.txt"
+    filename = f"Data_J1J2/finite_T_data_Lx{args.Lx}_Ly{args.Ly}_beta{args.beta_max:.1f}_dt{args.dt:.4f}_chi{data_mpo['chi_max']}_J1{args.J1:.2f}_J2{args.J2:.4f}_Fz{args.Fz:.2f}_conserve{args.conserve}.txt"
     save_data_to_file(data_mpo, Lx=args.Lx, Ly=args.Ly, J1=args.J1, J2=args.J2, Fz=args.Fz, chi_max=data_mpo['chi_max'], filename=filename)
     
     fig, axes = plt.subplots(2, 2, figsize=(12, 8))
