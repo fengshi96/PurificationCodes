@@ -1,4 +1,4 @@
-from model_Kladder import Kitaev_Ladder
+from models.model_Kladder import Kitaev_Ladder
 import numpy as np
 from mpo_fluxes_Kladder import S1Operators, S2Operators, fluxes_op
 from tenpy.networks.purification_mps import PurificationMPS

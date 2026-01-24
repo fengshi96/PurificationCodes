@@ -204,7 +204,7 @@ if __name__ == "__main__":
     from tenpy.tools import hdf5_io
     from tenpy.networks.mps import MPS, MPSEnvironment
     from tenpy.networks.mpo import MPOEnvironment
-    from model_Kladder import Kitaev_Ladder
+    from models.model_Kladder import Kitaev_Ladder
     sys.argv ## get the input argument
     total = len(sys.argv)
     cmdargs = sys.argv

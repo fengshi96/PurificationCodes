@@ -1,4 +1,4 @@
-from model_J1J2 import J1J2
+from models.model_J1J2 import J1J2
 import numpy as np
 from tenpy.networks.purification_mps import PurificationMPS
 from tenpy.algorithms.purification import PurificationTEBD, PurificationApplyMPO
