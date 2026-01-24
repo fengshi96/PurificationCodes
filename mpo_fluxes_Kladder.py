@@ -8,7 +8,6 @@ from tenpy.networks.site import SpinHalfSite
 from tenpy.models.model import CouplingMPOModel
 from tenpy.models.lattice import Honeycomb
 from tenpy.models.lattice import Ladder
-from energy_dynamics_Kladder import measure_energy_densities
 import math
 
 
