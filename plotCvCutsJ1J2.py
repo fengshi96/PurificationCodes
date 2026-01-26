@@ -4,7 +4,7 @@ import glob
 import os
 
 # ===== Configuration =====
-chi_max = 150  # Bond dimension to use - CHANGE THIS TO SELECT DIFFERENT CHI
+chi_max = 290  # Bond dimension to use - CHANGE THIS TO SELECT DIFFERENT CHI
 # ===== End Configuration =====
 
 # Path to data directory
