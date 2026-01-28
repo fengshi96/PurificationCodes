@@ -4,8 +4,14 @@ from matplotlib.colors import LogNorm
 import glob
 import os
 
+def safe_log10(arr):
+    out = np.full_like(arr, np.nan, dtype=float)
+    mask = arr > 0
+    out[mask] = np.log10(arr[mask])
+    return out
+
 # Path to data directory
-data_dir = "clusterData/Kladder/chi300"
+data_dir = "clusterData/Kladder/chi200"
 
 # Get all data files
 data_files = sorted(glob.glob(os.path.join(data_dir, "finite_T_data_L*_h*.txt")))
@@ -104,8 +110,10 @@ Wp_2d = np.array(Wp_mesh).T
 fig1, axes1 = plt.subplots(1, 2, figsize=(14, 5))
 
 # Cv contour
-levels_cv = np.linspace(np.log10(Cv_2d).min()/20, np.log10(Cv_2d).max()*1.1, 100)
-cf1 = axes1[0].contourf(H, T, np.log10(Cv_2d), levels=levels_cv, cmap='jet', extend='both')
+log_Cv_2d = safe_log10(Cv_2d)
+finite_cv = np.isfinite(log_Cv_2d)
+levels_cv = np.linspace(log_Cv_2d[finite_cv].min()/20, log_Cv_2d[finite_cv].max()*1.1, 100)
+cf1 = axes1[0].contourf(H, T, log_Cv_2d, levels=levels_cv, cmap='jet', extend='both')
 axes1[0].set_xlabel(r'$h$', fontsize=12)
 axes1[0].set_ylabel(r'$T$', fontsize=12)
 axes1[0].set_title(r'$C_v$ vs $(h, T)$', fontsize=12)
@@ -114,8 +122,10 @@ cbar1 = plt.colorbar(cf1, ax=axes1[0], extend='both')
 cbar1.set_label(r'$C_v$', fontsize=11)
 
 # Cv/T contour
-levels_cvt = np.linspace(np.log10(CvT_2d).min()/20, np.log10(CvT_2d).max()*1.1, 100)
-cf2 = axes1[1].contourf(H, T, np.log10(CvT_2d), levels=levels_cvt, cmap='jet', extend='both')
+log_CvT_2d = safe_log10(CvT_2d)
+finite_cvt = np.isfinite(log_CvT_2d)
+levels_cvt = np.linspace(log_CvT_2d[finite_cvt].min()/20, log_CvT_2d[finite_cvt].max()*1.1, 100)
+cf2 = axes1[1].contourf(H, T, log_CvT_2d, levels=levels_cvt, cmap='jet', extend='both')
 axes1[1].set_xlabel(r'$h$', fontsize=12)
 axes1[1].set_ylabel(r'$T$', fontsize=12)
 axes1[1].set_title(r'$C_v/T$ vs $(h, T)$', fontsize=12)

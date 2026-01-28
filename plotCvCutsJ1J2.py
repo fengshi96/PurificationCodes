@@ -4,18 +4,18 @@ import glob
 import os
 
 # ===== Configuration =====
-chi_max = 290  # Bond dimension to use - CHANGE THIS TO SELECT DIFFERENT CHI
+chi_max = 110  # Bond dimension to use - CHANGE THIS TO SELECT DIFFERENT CHI
 # ===== End Configuration =====
 
 # Path to data directory
-data_dir = "clusterData/J1J2"
+data_dir = "clusterData/J1J2_Grand"
 
 # Get all data files for the specified chi value
-data_files = sorted(glob.glob(os.path.join(data_dir, f"finite_T_data_*_chi{chi_max}_*conserveSz.txt")))
+data_files = sorted(glob.glob(os.path.join(data_dir, f"finite_T_data_*_chi{chi_max}_*conserve*.txt")))
 
 if len(data_files) == 0:
     print(f"Error: No data files found for chi={chi_max} in {data_dir}")
-    print(f"Searched for: {os.path.join(data_dir, f'finite_T_data_*_chi{chi_max}_*conserveSz.txt')}")
+    print(f"Searched for: {os.path.join(data_dir, f'finite_T_data_*_chi{chi_max}_*conserve*.txt')}")
     exit(1)
 
 print(f"Found {len(data_files)} data files for chi={chi_max}")

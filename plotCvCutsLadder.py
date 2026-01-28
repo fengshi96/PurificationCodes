@@ -4,7 +4,7 @@ import glob
 import os
 
 # Path to data directory
-data_dir = "clusterData/Kladder/chi300"
+data_dir = "clusterData/Kladder/chi200"
 
 # Get all data files
 data_files = sorted(glob.glob(os.path.join(data_dir, "finite_T_data_L*_h*.txt")))
