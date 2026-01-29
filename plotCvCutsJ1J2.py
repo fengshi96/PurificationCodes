@@ -4,11 +4,11 @@ import glob
 import os
 
 # ===== Configuration =====
-chi_max = 110  # Bond dimension to use - CHANGE THIS TO SELECT DIFFERENT CHI
+chi_max = 270  # Bond dimension to use - CHANGE THIS TO SELECT DIFFERENT CHI
 # ===== End Configuration =====
 
 # Path to data directory
-data_dir = "clusterData/J1J2_Grand"
+data_dir = "clusterData/J1J2"
 
 # Get all data files for the specified chi value
 data_files = sorted(glob.glob(os.path.join(data_dir, f"finite_T_data_*_chi{chi_max}_*conserve*.txt")))
