@@ -1,7 +1,7 @@
 """
 implement extended Kitaev on a ladder lattice
 Sign Convention:
-H = (-Jx XX - Jy YY - Jz ZZ) - Fx Sx - Fy Sy - Fz Sz
+H = (Jx XX + Jy YY + Jz ZZ) - Fx Sx - Fy Sy - Fz Sz
 """
 from tenpy.networks.site import SpinHalfSite
 # from tenpy.linalg import np_conserved as npc
@@ -57,9 +57,9 @@ class Kitaev_Ladder(CouplingMPOModel):
 
 
         # allow for anisotropic couplings
-        Jx = J_K
-        Jy = J_K
-        Jz = J_K
+        Jx = -J_K
+        Jy = -J_K
+        Jz = -J_K
 
         # # Kitaev interactions
         if model_params['order'] == 'default':
@@ -130,9 +130,9 @@ class Kitaev_Ladder(CouplingMPOModel):
 
         # magnetic fields:
         for u in range(len(self.lat.unit_cell)):
-            self.add_onsite(Fx, u, 'Sigmax')
-            self.add_onsite(Fy, u, 'Sigmay')
-            self.add_onsite(Fz, u, 'Sigmaz')
+            self.add_onsite(-Fx, u, 'Sigmax')
+            self.add_onsite(-Fy, u, 'Sigmay')
+            self.add_onsite(-Fz, u, 'Sigmaz')
 
 
 
