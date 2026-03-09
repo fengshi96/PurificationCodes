@@ -227,7 +227,9 @@ def compute_correlator(H_model, J_model, beta_target):
     )
     eng_apply_j.run()
 
+    # this is the same as ExpMPOEvolution in https://tenpy.readthedocs.io/en/latest/reference/tenpy.networks.mpo.MPO.html#tenpy.networks.mpo.MPO.make_U 
     U_real = H_model.H_MPO.make_U(-1.0j * DT_REAL, APPROX)
+    
     eng_left = PurificationApplyMPO(
         left,
         U_real,
