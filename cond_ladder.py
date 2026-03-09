@@ -395,12 +395,19 @@ def main():
 
     fig, axes = plt.subplots(1, 3, figsize=(18, 5.2))
 
-    # Panel 1: contour kappa_reg(omega, T)
-    cf = axes[0].contourf(omegas, temperatures, kappa_reg_all, levels=40, cmap="viridis")
-    axes[0].set_xlabel(r"$\omega$")
-    axes[0].set_ylabel(r"$T$")
-    axes[0].set_title(r"$\kappa^{\mathrm{reg}}(\omega, T)$")
-    fig.colorbar(cf, ax=axes[0], label=r"$\kappa^{\mathrm{reg}}$")
+    # Panel 1: contour kappa_reg(omega, T), or line if only one temperature
+    if kappa_reg_all.shape[0] >= 2 and kappa_reg_all.shape[1] >= 2:
+        cf = axes[0].contourf(omegas, temperatures, kappa_reg_all, levels=40, cmap="viridis")
+        axes[0].set_xlabel(r"$\omega$")
+        axes[0].set_ylabel(r"$T$")
+        axes[0].set_title(r"$\kappa^{\mathrm{reg}}(\omega, T)$")
+        fig.colorbar(cf, ax=axes[0], label=r"$\kappa^{\mathrm{reg}}$")
+    else:
+        axes[0].plot(omegas, kappa_reg_all[0], lw=2)
+        axes[0].set_xlabel(r"$\omega$")
+        axes[0].set_ylabel(r"$\kappa^{\mathrm{reg}}(\omega)$")
+        axes[0].set_title(rf"$\kappa^{{\mathrm{{reg}}}}(\omega)$ at $T={temperatures[0]:.2f}$")
+        axes[0].grid(alpha=0.3)
 
     # Panel 2: thermal Drude weight Eq. (4)
     axes[1].plot(temperatures, d_th_all, "o-", lw=2)
