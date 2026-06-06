@@ -1,0 +1,994 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb,mathtools}
+\usepackage{bm}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{fancyvrb}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    urlcolor=blue,
+    citecolor=blue
+}
+
+\newcommand{\Tr}{\operatorname{Tr}}
+\newcommand{\Id}{\mathbb{1}}
+\newcommand{\Hphys}{\mathcal{H}_{\mathrm{phys}}}
+\newcommand{\Haux}{\mathcal{H}_{\mathrm{aux}}}
+\newcommand{\Htot}{\mathcal{H}_{\mathrm{phys}}\otimes\mathcal{H}_{\mathrm{aux}}}
+\newcommand{\Sz}{S^z}
+\newcommand{\Q}{Q}
+
+\title{Purification, Thermal Ensembles, and \texttt{conserve="Sz"} in TenPy}
+\author{}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\section*{Main conclusion}
+
+For the J1-J2 triangular Heisenberg model in \texttt{finite\_T\_J1J2.py},
+using
+\[
+\texttt{conserve="Sz"}
+\]
+does \emph{not} mean that the physical thermal ensemble is restricted to one
+fixed magnetization sector. In the purification calculation used in the code,
+the physical system is doubled by an auxiliary system. The U(1) charge constraint
+is imposed on the \emph{doubled purified state}, where the auxiliary charges
+compensate the physical charges. Therefore all physical total-\(\Sz\) sectors
+remain present in the thermal trace.
+
+The line
+\[
+\texttt{PurificationMPS.from\_infiniteT(...)}
+\]
+constructs the grand-canonical infinite-temperature purification. I checked the
+installed TenPy source used in this environment, TenPy version \texttt{1.1.0}:
+\texttt{PurificationMPS.from\_infiniteT} is the grand-canonical constructor,
+whereas TenPy has a separate constructor for a fixed charge sector,
+\[
+\texttt{PurificationMPS.from\_infiniteT\_canonical(..., charge\_sector=...)}.
+\]
+
+Thus, for the Hamiltonian currently implemented,
+\[
+H
+= \sum_{\langle i,j\rangle} J_1\, \bm S_i\cdot \bm S_j
++ \sum_{\langle\langle i,j\rangle\rangle} J_2\, \bm S_i\cdot \bm S_j
++ F_z \sum_i S_i^z,
+\]
+using \texttt{conserve="Sz"} is physically sensible and usually preferable.
+It is a symmetry optimization. It is not a projection to the physical
+\(S^z_{\mathrm{tot}}=0\), \(S^z_{\mathrm{tot}}=-N/2\), or any other fixed
+magnetization sector.
+
+\section{Thermal density matrices from the beginning}
+
+Let the physical Hilbert space of \(N\) spin-\(1/2\) sites be
+\[
+\Hphys = \bigotimes_{i=1}^N \mathbb{C}^2.
+\]
+The thermal density matrix at inverse temperature \(\beta = 1/T\) is
+\[
+\rho_\beta
+= \frac{e^{-\beta H}}{Z(\beta)},
+\qquad
+Z(\beta) = \Tr_{\Hphys}\left(e^{-\beta H}\right).
+\]
+For any physical observable \(O\),
+\[
+\langle O\rangle_\beta
+= \Tr_{\Hphys}(\rho_\beta O)
+= \frac{\Tr_{\Hphys}\left(e^{-\beta H}O\right)}
+        {\Tr_{\Hphys}\left(e^{-\beta H}\right)}.
+\]
+
+If the Hamiltonian conserves total magnetization,
+\[
+\left[H, S^z_{\mathrm{tot}}\right]=0,
+\qquad
+S^z_{\mathrm{tot}} = \sum_i S_i^z,
+\]
+then the physical Hilbert space decomposes into charge sectors:
+\[
+\Hphys = \bigoplus_M \Hphys^{(M)},
+\]
+where \(M\) is the total \(S^z\). In this case the grand-canonical thermal
+partition function, with no fixed magnetization constraint, is
+\[
+Z(\beta)
+= \sum_M \Tr_{\Hphys^{(M)}}\left(e^{-\beta H_M}\right).
+\]
+Here \(H_M\) is the Hamiltonian restricted to sector \(M\).
+
+A fixed-sector, or canonical-in-\(S^z\), calculation would instead use
+\[
+Z_M(\beta)
+= \Tr_{\Hphys^{(M)}}\left(e^{-\beta H_M}\right)
+\]
+for a single chosen \(M\). This is \emph{not} what
+\texttt{PurificationMPS.from\_infiniteT} does.
+
+If \(F_z\neq 0\), then the Hamiltonian includes a longitudinal field
+\[
+F_z S^z_{\mathrm{tot}}.
+\]
+This biases the magnetization thermally, but it still does not fix
+\(S^z_{\mathrm{tot}}\). The trace still sums over all \(M\), with field-dependent
+Boltzmann weights.
+
+\section{What purification does}
+
+Purification rewrites a mixed density matrix on \(\Hphys\) as a pure state on a
+larger Hilbert space
+\[
+\Htot = \Hphys \otimes \Haux.
+\]
+The auxiliary space \(\Haux\) is a copy of the physical Hilbert space.
+
+Choose an orthonormal basis \(\{|n\rangle\}\) of \(\Hphys\). The infinite
+temperature purification is the maximally entangled state
+\[
+|\Psi_{\infty}\rangle
+= \frac{1}{\sqrt{\dim \Hphys}}
+  \sum_n |n\rangle_{\mathrm{phys}}\otimes |n\rangle_{\mathrm{aux}}.
+\]
+Tracing out the auxiliary space gives
+\[
+\Tr_{\mathrm{aux}}\left(|\Psi_{\infty}\rangle\langle\Psi_{\infty}|\right)
+= \frac{1}{\dim\Hphys}\Id_{\mathrm{phys}}.
+\]
+This is the infinite-temperature density matrix.
+
+At finite temperature, imaginary-time evolution is applied only to the physical
+system:
+\[
+|\Psi_\beta\rangle
+= \left(e^{-\beta H/2}\otimes \Id_{\mathrm{aux}}\right)
+|\Psi_{\infty}\rangle.
+\]
+Then
+\[
+\Tr_{\mathrm{aux}}\left(|\Psi_\beta\rangle\langle\Psi_\beta|\right)
+\propto e^{-\beta H}.
+\]
+The normalization is
+\[
+\langle \Psi_\beta|\Psi_\beta\rangle
+= \Tr_{\Hphys}\left(e^{-\beta H}\right)
+= Z(\beta).
+\]
+Therefore
+\[
+\langle O\rangle_\beta
+=
+\frac{\langle\Psi_\beta|O|\Psi_\beta\rangle}
+     {\langle\Psi_\beta|\Psi_\beta\rangle}.
+\]
+
+\section{One spin: the simplest example}
+
+For one spin-\(1/2\), the physical basis is
+\[
+|\uparrow\rangle,\qquad |\downarrow\rangle.
+\]
+The infinite-temperature purification is
+\[
+|\Psi_\infty\rangle
+= \frac{1}{\sqrt{2}}
+\left(
+|\uparrow\rangle_{\mathrm{phys}}|\uparrow\rangle_{\mathrm{aux}}
++
+|\downarrow\rangle_{\mathrm{phys}}|\downarrow\rangle_{\mathrm{aux}}
+\right).
+\]
+Tracing over the auxiliary spin gives
+\[
+\rho_\infty
+= \Tr_{\mathrm{aux}}|\Psi_\infty\rangle\langle\Psi_\infty|
+= \frac{1}{2}
+\left(
+|\uparrow\rangle\langle\uparrow|
++
+|\downarrow\rangle\langle\downarrow|
+\right)
+= \frac{1}{2}\Id.
+\]
+Both physical \(S^z=+1/2\) and \(S^z=-1/2\) states are present. No physical
+sector has been removed.
+
+\section{Many spins: all physical magnetization sectors are included}
+
+For \(N\) spins,
+\[
+|\Psi_\infty\rangle
+= \frac{1}{\sqrt{2^N}}
+\sum_{\sigma_1,\ldots,\sigma_N}
+|\sigma_1,\ldots,\sigma_N\rangle_{\mathrm{phys}}
+\otimes
+|\sigma_1,\ldots,\sigma_N\rangle_{\mathrm{aux}}.
+\]
+The sum runs over all \(2^N\) spin configurations. These configurations include
+every physical total magnetization sector:
+\[
+M=-\frac{N}{2},-\frac{N}{2}+1,\ldots,\frac{N}{2}.
+\]
+Thus the infinite-temperature state is not a fixed-\(M\) state of the physical
+system. It is the full identity density matrix after tracing out the auxiliary
+system.
+
+\section{What \texttt{conserve="Sz"} means in an ordinary MPS}
+
+In an ordinary pure-state MPS without purification, using a U(1) symmetry often
+does mean that the represented physical wavefunction has a fixed total charge.
+For spin systems, the charge is usually
+\[
+\Q = 2 S^z_{\mathrm{tot}}.
+\]
+For example, an ordinary MPS with fixed total charge \(\Q=0\) represents a pure
+state in the physical \(S^z_{\mathrm{tot}}=0\) sector.
+
+This intuition is the source of the confusion. Purification is different because
+the MPS represents a vector in the doubled space
+\[
+\Hphys \otimes \Haux,
+\]
+not a wavefunction only in \(\Hphys\).
+
+\section{What is the local MPS tensor?}
+
+An MPS is just a factorized way to store the coefficients of a many-body state.
+For an ordinary spin chain,
+\[
+|\psi\rangle
+= \sum_{\sigma_1,\ldots,\sigma_N}
+C_{\sigma_1,\ldots,\sigma_N}
+|\sigma_1,\ldots,\sigma_N\rangle.
+\]
+The coefficient tensor \(C_{\sigma_1,\ldots,\sigma_N}\) is exponentially large.
+An MPS rewrites it as a product of local tensors:
+\[
+C_{\sigma_1,\ldots,\sigma_N}
+=
+\sum_{\alpha_1,\ldots,\alpha_{N-1}}
+B_1^{\sigma_1}{}_{\alpha_0,\alpha_1}
+B_2^{\sigma_2}{}_{\alpha_1,\alpha_2}
+\cdots
+B_N^{\sigma_N}{}_{\alpha_{N-1},\alpha_N}.
+\]
+For finite boundary conditions, \(\alpha_0\) and \(\alpha_N\) have dimension one.
+The indices \(\alpha_i\) are virtual or bond indices. The physical index
+\(\sigma_i\) labels the local spin state.
+
+In TenPy, the local MPS tensors are usually called \(B_i\). This \(B\) is not a
+magnetic field; it is the conventional name for the local MPS tensor. Depending
+on the canonical form, TenPy may internally store tensors in \(A\), \(B\), or
+mixed form, but the conceptual object is the same: a local tensor with one
+physical leg and two virtual legs.
+
+For purification, each site has two local legs:
+\[
+p_i = \text{physical spin index}, \qquad
+q_i = \text{auxiliary spin index}.
+\]
+Thus a purified MPS stores coefficients
+\[
+C_{p_1,q_1;\ldots;p_N,q_N}
+\]
+through local tensors
+\[
+B_i^{p_i,q_i}{}_{\alpha_{i-1},\alpha_i}.
+\]
+Equivalently,
+\[
+|\Psi\rangle
+=
+\sum_{\{p_i\},\{q_i\}}
+C_{p_1,q_1;\ldots;p_N,q_N}
+|p_1,\ldots,p_N\rangle_{\mathrm{phys}}
+\otimes
+|q_1,\ldots,q_N\rangle_{\mathrm{aux}}.
+\]
+
+\section{The infinite-temperature local tensor}
+
+At infinite temperature, the purified state should be
+\[
+|\Psi_\infty\rangle
+=
+\frac{1}{\sqrt{2^N}}
+\sum_{\sigma_1,\ldots,\sigma_N}
+|\sigma_1,\ldots,\sigma_N\rangle_{\mathrm{phys}}
+\otimes
+|\sigma_1,\ldots,\sigma_N\rangle_{\mathrm{aux}}.
+\]
+This means that the physical and auxiliary configurations are identical in each
+nonzero term:
+\[
+p_i=q_i \quad \text{for every site } i.
+\]
+Therefore the coefficient of a doubled configuration is
+\[
+C_{p_1,q_1;\ldots;p_N,q_N}
+=
+\frac{1}{\sqrt{2^N}}
+\prod_{i=1}^N \delta_{p_i,q_i}.
+\]
+
+This is why the local infinite-temperature tensor is diagonal in \(p\) and \(q\):
+\[
+B_i^{p_i,q_i}
+=
+\frac{1}{\sqrt{2}}\delta_{p_i,q_i}
+\]
+up to the trivial left and right virtual legs present at \(\beta=0\).
+For one site, explicitly,
+\[
+B^{\uparrow,\uparrow}=\frac{1}{\sqrt{2}},
+\qquad
+B^{\downarrow,\downarrow}=\frac{1}{\sqrt{2}},
+\qquad
+B^{\uparrow,\downarrow}=B^{\downarrow,\uparrow}=0.
+\]
+This is exactly the tensor version of
+\[
+|\Psi_\infty\rangle
+=
+\frac{1}{\sqrt{2}}
+\left(
+|\uparrow\rangle_{\mathrm{phys}}|\uparrow\rangle_{\mathrm{aux}}
++
+|\downarrow\rangle_{\mathrm{phys}}|\downarrow\rangle_{\mathrm{aux}}
+\right)
+\]
+on each site.
+
+In the installed TenPy source, version \texttt{1.1.0}, the relevant file is
+
+\begin{Verbatim}[fontsize=\small]
+tenpy/networks/purification_mps.py
+\end{Verbatim}
+
+The relevant code is:
+
+\begin{Verbatim}[fontsize=\small]
+for i in range(L):
+    p_leg = sites[i].leg
+    B = npc.diag(1.0, p_leg, dtype, ['p', 'q']) / sites[i].dim ** 0.5
+    # leg `q` has the physical leg with opposite `qconj`
+    B = B.add_trivial_leg(0, label='vL', qconj=+1).add_trivial_leg(1, label='vR', qconj=-1)
+    Bs[i] = B
+\end{Verbatim}
+
+There are two important facts in this block.
+
+\begin{enumerate}[label=(\roman*)]
+\item \texttt{npc.diag(..., ['p', 'q'])} makes a diagonal tensor between the
+physical leg \(p\) and the auxiliary leg \(q\). This is the code version of
+\[
+B_i^{p_i,q_i}\propto\delta_{p_i,q_i}.
+\]
+\item The comment says that the auxiliary leg \(q\) has the physical leg with
+opposite \texttt{qconj}. This is TenPy's way of saying that the auxiliary leg is
+the dual, or bra-like, copy of the physical leg for charge bookkeeping.
+\end{enumerate}
+
+For the spin-\(1/2\) site itself, the relevant part of TenPy's
+\texttt{SpinHalfSite} source is:
+
+\begin{Verbatim}[fontsize=\small]
+if conserve == 'Sz':
+    chinfo = npc.ChargeInfo([1], ['2*Sz'])
+    leg = npc.LegCharge.from_qflat(chinfo, [1, -1])
+\end{Verbatim}
+
+Thus the local physical charges are \(+1\) for \(|\uparrow\rangle\) and
+\(-1\) for \(|\downarrow\rangle\), using the convention \(\Q=2S^z\).
+The diagonal construction gives \(\delta_{p,q}\). The opposite \texttt{qconj}
+on the auxiliary leg gives the charge cancellation explained next.
+
+\section{What \texttt{conserve="Sz"} means in purification}
+
+In TenPy's purification MPS, each site tensor has a physical leg and an auxiliary
+leg. Call their local basis labels \(p\) and \(q\). For \texttt{SpinHalfSite}
+with \texttt{conserve="Sz"}, the physical charges are
+\[
+\Q(|\uparrow\rangle)=+1,\qquad
+\Q(|\downarrow\rangle)=-1,
+\]
+where \(\Q=2S^z\).
+
+The important implementation detail is that the auxiliary leg \(q\) is used with
+the opposite charge orientation. A nonzero tensor element obeys the charge
+selection rule
+\[
+\Q(\alpha_i)
+=
+\Q(\alpha_{i-1}) + \Q(p_i)-\Q(q_i),
+\]
+up to TenPy's internal sign convention for incoming and outgoing legs. The
+physical meaning is simple: the virtual bond charge tracks the accumulated
+difference
+\[
+\Q_{\mathrm{bond}}(i)
+=
+\sum_{j\le i}\left[\Q(p_j)-\Q(q_j)\right].
+\]
+For a finite MPS with trivial boundary charges, the total doubled charge is
+\[
+\sum_{j=1}^N \left[\Q(p_j)-\Q(q_j)\right]=0.
+\]
+
+This is the charge that is conserved by the purification MPS with
+\texttt{conserve="Sz"}:
+\[
+\Q_{\mathrm{doubled}}
+=
+\Q_{\mathrm{phys}}-\Q_{\mathrm{aux}}.
+\]
+It is \emph{not} the physical charge \(\Q_{\mathrm{phys}}\) alone.
+
+At \(\beta=0\), the diagonal tensor \(B_{p,q}\propto\delta_{p,q}\) makes every
+site locally neutral in this doubled sense:
+\[
+\Q(p_i)-\Q(q_i)=0.
+\]
+Thus all virtual bond charges are zero at infinite temperature. This does not
+mean all physical spins are in the same \(S^z\) sector. It means that every
+physical configuration is paired with an auxiliary configuration of the same
+charge.
+
+Because the auxiliary leg has the opposite effective charge, the physical charge
+and auxiliary charge cancel:
+\[
+\Q_{\mathrm{phys}}(p) + \Q_{\mathrm{aux, effective}}(q) = 0
+\quad\text{when }p=q.
+\]
+For example,
+\[
+|\uparrow\rangle_{\mathrm{phys}}|\uparrow\rangle_{\mathrm{aux}}
+\quad\text{has}\quad
+\Q_{\mathrm{phys}}=+1,\quad
+\Q_{\mathrm{aux,effective}}=-1,
+\]
+so the doubled charge is zero. Similarly,
+\[
+|\downarrow\rangle_{\mathrm{phys}}|\downarrow\rangle_{\mathrm{aux}}
+\quad\text{has}\quad
+\Q_{\mathrm{phys}}=-1,\quad
+\Q_{\mathrm{aux,effective}}=+1,
+\]
+so the doubled charge is also zero.
+
+Therefore the purified MPS can have total doubled charge zero while still
+containing all physical magnetization sectors.
+
+Another way to say the same thing is:
+\[
+\texttt{conserve="Sz"}
+\quad\Longrightarrow\quad
+\text{TenPy conserves charge on the doubled purified MPS.}
+\]
+It does not imply
+\[
+\text{physical } S^z_{\mathrm{tot}} \text{ is fixed to one chosen value.}
+\]
+Only if one explicitly uses a canonical fixed-charge purification is a single
+physical charge sector selected, for example
+\[
+\texttt{from\_infiniteT\_canonical}.
+\]
+
+\section{Why the auxiliary leg has opposite charge orientation}
+
+The reason is that purification is closely related to vectorizing an operator.
+Write a physical operator \(X\) as
+\[
+X=\sum_{p,q} X_{p,q}\, |p\rangle\langle q|.
+\]
+The index \(p\) is a ket index. The index \(q\) is a bra index. Under a U(1)
+rotation generated by charge \(\Q\),
+\[
+|p\rangle \mapsto e^{i\theta \Q(p)}|p\rangle,
+\qquad
+\langle q| \mapsto e^{-i\theta \Q(q)}\langle q|.
+\]
+Therefore the operator basis element transforms as
+\[
+|p\rangle\langle q|
+\mapsto
+e^{i\theta[\Q(p)-\Q(q)]}
+|p\rangle\langle q|.
+\]
+Its charge is not \(\Q(p)+\Q(q)\). Its charge is
+\[
+\Q(p)-\Q(q).
+\]
+
+Purification represents this operator-like object as a vector in a doubled
+Hilbert space:
+\[
+|X\rangle\rangle
+=
+\sum_{p,q} X_{p,q}
+|p\rangle_{\mathrm{phys}}
+\otimes
+|q\rangle_{\mathrm{aux}}.
+\]
+To preserve the operator charge \(\Q(p)-\Q(q)\), the auxiliary leg must carry
+the opposite charge orientation. This is why the auxiliary leg is not treated as
+a second independent physical spin with the same charge sign. It represents the
+bra index of the density matrix.
+
+The infinite-temperature operator is the identity,
+\[
+X=\Id=\sum_p |p\rangle\langle p|.
+\]
+Vectorizing it gives
+\[
+|\Id\rangle\rangle
+=
+\sum_p |p\rangle_{\mathrm{phys}}\otimes |p\rangle_{\mathrm{aux}}.
+\]
+Every term has doubled charge
+\[
+\Q(p)-\Q(p)=0.
+\]
+This is exactly why the local tensor is diagonal:
+\[
+B_{p,q}\propto\delta_{p,q}.
+\]
+
+\section{Why one still sets \texttt{conserve="Sz"} by hand}
+
+The line in TenPy's purification code
+
+\begin{Verbatim}[fontsize=\small]
+# leg `q` has the physical leg with opposite `qconj`
+\end{Verbatim}
+
+does not by itself create a nontrivial \(S^z\) conservation law. It only says how
+to orient the charge of the auxiliary leg relative to the physical leg. There
+must already be a nontrivial charge on the physical leg.
+
+That physical-leg charge is created by the site definition. In your model this
+happens here:
+
+\begin{Verbatim}[fontsize=\small]
+site = SpinHalfSite(conserve=conserve)
+\end{Verbatim}
+
+If one passes
+
+\begin{Verbatim}[fontsize=\small]
+conserve="Sz"
+\end{Verbatim}
+
+then TenPy constructs the physical leg with charges
+\[
+\Q(|\uparrow\rangle)=+1,\qquad
+\Q(|\downarrow\rangle)=-1.
+\]
+Then \texttt{from\_infiniteT} uses the same physical leg for \(p\), and the
+opposite orientation for \(q\). The result is a nontrivial doubled U(1) symmetry:
+\[
+\Q_{\mathrm{doubled}}=\Q_{\mathrm{phys}}-\Q_{\mathrm{aux}}.
+\]
+
+If instead one passes
+
+\begin{Verbatim}[fontsize=\small]
+conserve=None
+\end{Verbatim}
+
+then \texttt{SpinHalfSite} uses a trivial charge leg. In that case, the
+auxiliary leg still has the opposite \texttt{qconj}, but the charge itself is
+trivial. Schematically,
+\[
+\Q(|\uparrow\rangle)=0,\qquad
+\Q(|\downarrow\rangle)=0.
+\]
+Then
+\[
+\Q_{\mathrm{doubled}}=0-0=0
+\]
+for every tensor element, and the U(1) block structure is absent. The calculation
+can still represent the same physics, but it stores tensors densely instead of
+using the \(S^z\) block sparsity.
+
+So there are two separate ingredients:
+
+\begin{enumerate}[label=(\roman*)]
+\item \texttt{conserve="Sz"} on \texttt{SpinHalfSite}: define a nontrivial U(1)
+charge on the local physical basis.
+\item opposite \texttt{qconj} on the purification auxiliary leg: make that
+charge act as a bra/dual charge, so the purified tensor tracks
+\(\Q_{\mathrm{phys}}-\Q_{\mathrm{aux}}\).
+\end{enumerate}
+
+Both are needed for a useful \(S^z\)-symmetric purification MPS. The first
+supplies the charge labels. The second orients the auxiliary copy correctly.
+
+This is why \texttt{conserve="Sz"} is not redundant. Without it, TenPy still
+builds a grand-canonical infinite-temperature purification, but it does not use
+the nontrivial \(S^z\) symmetry. With it, TenPy builds the same physical
+grand-canonical purification in a symmetry-resolved tensor representation.
+
+\section{Why TenPy's purification example does not use \texttt{conserve="Sz"}}
+
+The official TenPy purification example uses the transverse-field Ising chain:
+
+\begin{Verbatim}[fontsize=\small]
+from tenpy.models.tf_ising import TFIChain
+
+model_params = dict(L=L, J=1.0, g=1.2)
+M = TFIChain(model_params)
+psi = PurificationMPS.from_infiniteT(M.lat.mps_sites(), bc=bc)
+\end{Verbatim}
+
+This is a good minimal example of purification, but it is not an example of a
+Hamiltonian with U(1) \(S^z\) conservation. The transverse field mixes
+\(|\uparrow\rangle\) and \(|\downarrow\rangle\), so it changes total \(S^z\).
+Equivalently,
+\[
+[H_{\mathrm{TFI}},S^z_{\mathrm{tot}}]\ne 0.
+\]
+
+Therefore one should not impose \texttt{conserve="Sz"} for that model. In fact,
+TenPy's \texttt{SpinHalfSite} documentation says that with
+\texttt{conserve="Sz"}, the onsite operators \texttt{Sx}, \texttt{Sy},
+\texttt{Sigmax}, and \texttt{Sigmay} are excluded. That is exactly because they
+carry nonzero \(S^z\) charge. A transverse-field Ising model needs such
+spin-flip operators, so it must use a site representation without U(1)
+\(S^z\) conservation, or at most a different symmetry such as a discrete parity
+if the model supports it.
+
+Thus the rule is not
+\[
+\text{``purification should avoid \texttt{conserve="Sz"}.''}
+\]
+The rule is
+\[
+\text{``use only symmetries that the Hamiltonian exactly preserves.''}
+\]
+
+For the J1-J2 Heisenberg Hamiltonian in this project,
+\[
+S_i^zS_j^z,\qquad S_i^+S_j^-,\qquad S_i^-S_j^+,\qquad F_zS_i^z
+\]
+all conserve total \(S^z\). Hence \texttt{conserve="Sz"} is appropriate for
+that model.
+
+\section{Why doubled charge conservation does not remove physical sectors}
+
+The phrase ``the purified MPS has total doubled charge zero'' means
+\[
+\Q_{\mathrm{phys}}-\Q_{\mathrm{aux}}=0.
+\]
+It does not mean
+\[
+\Q_{\mathrm{phys}}=0.
+\]
+It means
+\[
+\Q_{\mathrm{phys}}=\Q_{\mathrm{aux}}.
+\]
+The common value can be anything.
+
+For example, a term with all physical spins up and all auxiliary spins up has
+\[
+\Q_{\mathrm{phys}}=+N,\qquad \Q_{\mathrm{aux}}=+N,
+\]
+so
+\[
+\Q_{\mathrm{phys}}-\Q_{\mathrm{aux}}=0.
+\]
+This term is allowed. A term with all physical spins down and all auxiliary
+spins down has
+\[
+\Q_{\mathrm{phys}}=-N,\qquad \Q_{\mathrm{aux}}=-N,
+\]
+so it is also allowed. Likewise every intermediate magnetization sector is
+allowed.
+
+Equivalently, the doubled-charge-zero space contains all operator blocks
+\[
+\Hphys^{(M)} \to \Hphys^{(M)}
+\]
+for every physical magnetization \(M\). It excludes only off-diagonal operator
+blocks
+\[
+\Hphys^{(M)} \to \Hphys^{(M')}
+\qquad (M\ne M').
+\]
+For a Hamiltonian conserving \(S^z_{\mathrm{tot}}\), the thermal operator
+\[
+e^{-\beta H}
+\]
+is block diagonal in \(M\). Hence the excluded off-diagonal blocks are exactly
+zero anyway. Nothing physical is lost.
+
+The partition function is still
+\[
+Z(\beta)
+=
+\sum_M \Tr_{\Hphys^{(M)}}e^{-\beta H_M}.
+\]
+All physical magnetization sectors contribute to the trace.
+
+\section{Why physical observables are unaffected}
+
+Let
+\[
+X_\beta=e^{-\beta H/2}.
+\]
+The purification is the vectorized operator
+\[
+|\Psi_\beta\rangle = |X_\beta\rangle\rangle.
+\]
+For a physical observable \(O\),
+\[
+\frac{\langle \Psi_\beta|O|\Psi_\beta\rangle}
+     {\langle \Psi_\beta|\Psi_\beta\rangle}
+=
+\frac{\Tr(X_\beta^\dagger O X_\beta)}
+     {\Tr(X_\beta^\dagger X_\beta)}
+=
+\frac{\Tr(e^{-\beta H}O)}
+     {\Tr(e^{-\beta H})}.
+\]
+This is the ordinary thermal expectation value.
+
+If \(H\) conserves \(S^z_{\mathrm{tot}}\), then \(X_\beta\) is block diagonal in
+physical magnetization:
+\[
+X_\beta = \bigoplus_M e^{-\beta H_M/2}.
+\]
+The doubled-charge-zero purified MPS stores all of these blocks at once:
+\[
+|X_\beta\rangle\rangle
+=
+\bigoplus_M |e^{-\beta H_M/2}\rangle\rangle.
+\]
+The thermal trace still sums over \(M\). Thus the symmetry is not changing the
+ensemble; it is only removing operator blocks that symmetry says are exactly
+zero.
+
+There is one useful consequence: if an observable changes total \(S^z\), such
+as a single \(S^x_i\), its thermal expectation value is zero in a
+U(1)-symmetric thermal state. TenPy also does not provide \texttt{Sx} or
+\texttt{Sigmax} as onsite operators when \texttt{conserve="Sz"}, because those
+operators carry nonzero charge. Charge-neutral observables such as \(H\),
+\(S^z_i\), \(S_i^+S_j^-\), and combinations forming transverse correlations can
+still be represented in symmetry-compatible ways.
+
+\section{A useful table}
+
+For \(N\) spins, consider a physical configuration with total physical charge
+\[
+\Q_{\mathrm{phys}} = 2S^z_{\mathrm{tot}} = M_Q.
+\]
+In the infinite-temperature purification, it is paired with the same spin
+configuration on the auxiliary leg. Since the auxiliary leg has the opposite
+effective charge, the doubled charge is
+\[
+\Q_{\mathrm{doubled}}
+= \Q_{\mathrm{phys}} + \Q_{\mathrm{aux,effective}}
+= M_Q - M_Q = 0.
+\]
+
+\[
+\begin{array}{c|c|c|c}
+\text{physical configuration} &
+\Q_{\mathrm{phys}} &
+\Q_{\mathrm{aux,effective}} &
+\Q_{\mathrm{doubled}} \\
+\hline
+\text{all up} & +N & -N & 0 \\
+\text{all down} & -N & +N & 0 \\
+\text{half up, half down} & 0 & 0 & 0 \\
+\text{any configuration} & M_Q & -M_Q & 0
+\end{array}
+\]
+
+All physical magnetization sectors are compatible with the same total doubled
+charge sector.
+
+\section{Why imaginary-time evolution preserves the conclusion}
+
+Your Hamiltonian is
+\[
+H
+= \sum_{\langle i,j\rangle}
+J_1
+\left(
+S_i^zS_j^z
++ \frac{1}{2}S_i^+S_j^-
++ \frac{1}{2}S_i^-S_j^+
+\right)
++ \sum_{\langle\langle i,j\rangle\rangle}
+J_2
+\left(
+S_i^zS_j^z
++ \frac{1}{2}S_i^+S_j^-
++ \frac{1}{2}S_i^-S_j^+
+\right)
++ F_z\sum_i S_i^z.
+\]
+Each term conserves total \(S^z\):
+\[
+[H,S^z_{\mathrm{tot}}]=0.
+\]
+Therefore \(e^{-\beta H/2}\) also conserves physical \(S^z\). Starting from a
+purification that contains all physical \(S^z\) sectors, imaginary-time
+evolution evolves each sector independently:
+\[
+|\Psi_\beta\rangle
+= \sum_M
+\left(e^{-\beta H_M/2}\otimes \Id_{\mathrm{aux}}\right)
+|\Psi_{\infty}^{(M)}\rangle.
+\]
+No sector is thrown away. The final thermal trace is still
+\[
+Z(\beta)=\sum_M \Tr_{\Hphys^{(M)}}e^{-\beta H_M}.
+\]
+
+\section{Mapping this to \texttt{finite\_T\_J1J2.py}}
+
+The relevant code structure is:
+\[
+\texttt{site = SpinHalfSite(conserve=conserve)}
+\]
+inside \texttt{models/model\_J1J2.py}, and
+\[
+\texttt{psi = PurificationMPS.from\_infiniteT(M.lat.mps\_sites(), bc=bc)}
+\]
+inside \texttt{imag\_apply\_mpo}.
+
+The first line says: use block-sparse tensors with a U(1) charge if
+\texttt{conserve="Sz"}.
+
+The second line says: initialize the grand-canonical infinite-temperature
+purification.
+
+The evolution operator is generated by
+\[
+\texttt{M.H\_MPO.make\_U(-d * dt, approx)}.
+\]
+Since \texttt{make\_U(t)} approximates \(e^{tH}\), using negative real
+imaginary-time steps gives approximately
+\[
+e^{-dt H}.
+\]
+The purification state should evolve as
+\[
+|\Psi_\beta\rangle=e^{-\beta H/2}|\Psi_\infty\rangle.
+\]
+Thus if the state is evolved by \(dt\) in the ket, the physical density matrix
+corresponds to an inverse-temperature increase
+\[
+\Delta\beta = 2dt.
+\]
+That is why the code has
+\[
+\texttt{beta += 2. * dt}.
+\]
+
+\section{What would be a fixed-sector calculation?}
+
+A fixed-sector calculation would explicitly choose one physical total charge
+sector. Examples:
+
+\begin{enumerate}[label=(\alph*)]
+\item Using TenPy's canonical purification constructor:
+\[
+\texttt{PurificationMPS.from\_infiniteT\_canonical(sites, charge\_sector=...)}
+\]
+This is designed for a canonical infinite-temperature ensemble in a specified
+charge sector.
+
+\item Using exact diagonalization with a charge-sector projection:
+\[
+\texttt{ExactDiag(model, charge\_sector=...)}
+\]
+
+\item Initializing a pure product state such as all spins down. That would not be
+a thermal purification of the full Hilbert space.
+\end{enumerate}
+
+Your current code does none of these.
+
+\section{When should \texttt{conserve="Sz"} not be used?}
+
+Use \texttt{conserve="Sz"} only if the Hamiltonian conserves total \(S^z\).
+The current J1-J2 Heisenberg model with longitudinal field does conserve it.
+
+Do \emph{not} use \texttt{conserve="Sz"} if you add terms such as
+\[
+h_x\sum_i S_i^x,
+\qquad
+h_y\sum_i S_i^y,
+\]
+or any other term that changes total \(S^z\). In that case,
+\[
+[H,S^z_{\mathrm{tot}}]\neq 0,
+\]
+and the U(1) symmetry assumption is invalid. Then use
+\[
+\texttt{conserve=None}.
+\]
+
+\section{Why \texttt{conserve=None} and \texttt{conserve="Sz"} can differ numerically}
+
+In exact arithmetic and with sufficiently large bond dimension, the two
+calculations should give the same physical grand-canonical thermal observables
+for this Hamiltonian:
+\[
+\texttt{conserve=None}
+\quad\text{and}\quad
+\texttt{conserve="Sz"}.
+\]
+However, with finite bond dimension and truncation, they can differ slightly.
+Reasons include:
+
+\begin{itemize}
+\item The block-sparse calculation distributes the available bond dimension
+across symmetry sectors.
+\item The non-symmetric calculation has no sector structure, so truncation is
+organized differently.
+\item At the same nominal \(\chi_{\max}\), the effective variational spaces are
+not identical.
+\item Numerical roundoff and singular-value truncation can differ.
+\end{itemize}
+
+Such differences are truncation effects, not evidence that
+\texttt{conserve="Sz"} computes a fixed physical magnetization ensemble.
+
+\section{Practical checklist for the current code}
+
+For the present J1-J2 triangular Heisenberg model:
+
+\begin{itemize}
+\item \texttt{conserve="Sz"} makes sense.
+\item The ensemble initialized by \texttt{from\_infiniteT} is grand-canonical in
+physical magnetization.
+\item The physical trace includes all \(S^z_{\mathrm{tot}}\) sectors.
+\item \texttt{conserve=None} is allowed but should be slower and usually less
+efficient.
+\item \texttt{conserve=None} is required only if the Hamiltonian breaks total
+\(S^z\) conservation.
+\end{itemize}
+
+Two unrelated code-cleanup points:
+
+\begin{itemize}
+\item The loop \(\texttt{while beta < beta\_max}\) can overshoot by one step due
+to floating-point roundoff. An integer step count is safer.
+\item If the plotted \(C_v\) is meant to be specific heat per site, divide the
+finite-difference result by \(N=L_xL_y\). Without that division, it is the total
+heat capacity of the finite cluster.
+\end{itemize}
+
+\section*{Final statement}
+
+The phrase \texttt{conserve="Sz"} is easy to misread. In this purification
+context it should be read as:
+\[
+\text{``use \(S^z\) conservation as a tensor symmetry.''}
+\]
+It should not be read as:
+\[
+\text{``fix the physical thermal ensemble to one \(S^z\) sector.''}
+\]
+
+For the current J1-J2 Heisenberg Hamiltonian, using \texttt{conserve="Sz"} in
+the purification calculation is physically correct.
+
+\end{document}

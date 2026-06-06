@@ -48,18 +48,18 @@ from tenpy.networks.purification_mps import PurificationMPS
 # ==============================
 LX = 11
 J_K = -1.0
-H_FIELD = 0.09
+H_FIELD = 0.00
 BC = "open"
 BC_MPS = "finite"
 ORDER = "default"
 
 # Sweep temperatures T = 1 / beta
 TEMP_LIST = [0.5]
-DT_IMAG = 0.1
-DT_REAL = 0.1
-N_STEPS_REAL = 120
+DT_IMAG = 0.02
+DT_REAL = 0.02
+N_STEPS_REAL = 200
 
-CHI_MAX = 70
+CHI_MAX = 30
 SVD_MIN = 1.0e-8
 TRUNC_CUT = 1.0e-8
 APPROX = "II"
@@ -84,6 +84,8 @@ TAIL_FRACTION = 0.25
 # Progress print cadence
 PROGRESS_EVERY_IMAG_STEPS = 1
 PROGRESS_EVERY_REAL_STEPS = 1
+NORM_DIAGNOSTICS_EVERY_REAL_STEPS = 50
+ENABLE_NORM_DIAGNOSTICS = False
 
 
 TRUNC_PARAMS = {
@@ -164,26 +166,38 @@ def cool_to_target_beta(psi, h_mpo, beta_target):
     """
     # In purification, applying exp(-tau H) to |psi> corresponds to rho ~ exp(-2 tau H)
     tau_target = 0.5 * beta_target
+    if tau_target <= 1.0e-14:
+        return psi
+
     tau = 0.0
     imag_step = 0
     n_imag_steps = int(np.ceil(tau_target / DT_IMAG))
     t0 = time.time()
 
-    Us_imag = [h_mpo.make_U(-d * DT_IMAG, APPROX) for d in [0.5 + 0.5j, 0.5 - 0.5j]]
-    eng = PurificationApplyMPO(
-        psi,
-        Us_imag[0],
-        {"trunc_params": TRUNC_PARAMS, "max_trunc_err": MAX_TRUNC_ERR_DEBUG},
-    )
+    # Reuse engine object; only update U when step size changes (typically at most last step).
+    dt_prev = None
+    eng = None
 
     while tau < tau_target - 1.0e-12:
+        dt_step = min(DT_IMAG, tau_target - tau)
+        if dt_prev is None or not np.isclose(dt_step, dt_prev):
+            Us_imag = [h_mpo.make_U(-d * dt_step, APPROX) for d in [0.5 + 0.5j, 0.5 - 0.5j]]
+            if eng is None:
+                eng = PurificationApplyMPO(
+                    psi,
+                    Us_imag[0],
+                    {"trunc_params": TRUNC_PARAMS, "max_trunc_err": MAX_TRUNC_ERR_DEBUG},
+                )
+            dt_prev = dt_step
+
         for U in Us_imag:
             eng.init_env(U)
             eng.run()
-        tau += DT_IMAG
+
+        tau += dt_step
         imag_step += 1
         if imag_step % PROGRESS_EVERY_IMAG_STEPS == 0 or imag_step == n_imag_steps:
-            pct = 100.0 * imag_step / max(1, n_imag_steps)
+            pct = 100.0 * tau / max(tau_target, 1.0e-15)
             print(
                 f"    imag-time: {imag_step:4d}/{n_imag_steps:4d} "
                 f"({pct:5.1f}%)  tau={tau:.4f}/{tau_target:.4f}  "
@@ -214,9 +228,13 @@ def compute_correlator(H_model, J_model, beta_target):
         Real-time grid.
     c_th : ndarray
         ``Re< J(t)J(0) >/L`` used in Eq. (4) and Eq. (5).
+    s_ent : ndarray
+        Max bipartite entanglement entropy of the left branch versus time.
     """
     psi_beta = PurificationMPS.from_infiniteT(H_model.lat.mps_sites(), bc=BC_MPS)
     psi_beta = cool_to_target_beta(psi_beta, H_model.H_MPO, beta_target)
+
+    z_beta = psi_beta.overlap(psi_beta) if ENABLE_NORM_DIAGNOSTICS else None
 
     left = psi_beta.copy()
     right = psi_beta.copy()
@@ -242,7 +260,9 @@ def compute_correlator(H_model, J_model, beta_target):
     )
 
     times = [0.0]
-    corr = [overlap_mpo(left, J_model.H_MPO, right)]
+    z_t = left.overlap(left)
+    corr = [overlap_mpo(left, J_model.H_MPO, right) / z_t]
+    s_ent = [np.max(left.entanglement_entropy())]
     t0 = time.time()
 
     for step in range(1, N_STEPS_REAL + 1):
@@ -251,19 +271,33 @@ def compute_correlator(H_model, J_model, beta_target):
         eng_right.init_env(U_real)
         eng_right.run()
         times.append(step * DT_REAL)
-        corr.append(overlap_mpo(left, J_model.H_MPO, right))
+        z_t = left.overlap(left)
+        corr.append(overlap_mpo(left, J_model.H_MPO, right) / z_t)
+        s_ent.append(np.max(left.entanglement_entropy()))
         if step % PROGRESS_EVERY_REAL_STEPS == 0 or step == N_STEPS_REAL:
             pct = 100.0 * step / max(1, N_STEPS_REAL)
-            print(
-                f"    real-time: {step:4d}/{N_STEPS_REAL:4d} ({pct:5.1f}%)  "
-                f"t={times[-1]:.4f}  elapsed={_fmt_seconds(time.time() - t0)}"
-            )
+            if ENABLE_NORM_DIAGNOSTICS and (
+                step % NORM_DIAGNOSTICS_EVERY_REAL_STEPS == 0 or step == N_STEPS_REAL
+            ):
+                norm_left = z_t / z_beta
+                norm_right = right.overlap(right) / z_beta
+                print(
+                    f"    real-time: {step:4d}/{N_STEPS_REAL:4d} ({pct:5.1f}%)  "
+                    f"t={times[-1]:.4f}  elapsed={_fmt_seconds(time.time() - t0)}  "
+                    f"||L||^2/Z={norm_left:.3e} ||R||^2/Z={norm_right:.3e}"
+                )
+            else:
+                print(
+                    f"    real-time: {step:4d}/{N_STEPS_REAL:4d} ({pct:5.1f}%)  "
+                    f"t={times[-1]:.4f}  elapsed={_fmt_seconds(time.time() - t0)}"
+                )
 
     times = np.array(times, dtype=float)
     corr = np.array(corr, dtype=complex)
+    s_ent = np.array(s_ent, dtype=float)
     # C_th(t) in the convention used in the paper: Re <J(t)J> / L
     c_th = corr.real / H_model.lat.N_sites
-    return times, c_th
+    return times, c_th, s_ent
 
 
 def estimate_drude_weight(c_th, temperature):
@@ -289,9 +323,11 @@ def kappa_regular_from_ctilde(times, c_tilde, temperature, omegas):
 
     Numerical details
     -----------------
-    - Uses finite integration range set by simulated times,
+        - Uses finite integration range set by simulated times,
     - Applies a Hann window to reduce ringing from time truncation,
-    - Uses the smooth ``omega->0`` limit ``1/T^2`` for the prefactor.
+        - Uses the smooth ``omega->0`` limit ``1/T^2`` for the prefactor,
+        - Evaluates the even part with a cosine transform (equivalent to taking
+            the real part of the two-sided Fourier transform for real correlators).
     """
     # Eq. (5): kappa_reg(omega)
     # kappa_reg(omega)=((1-exp(-omega/T))/(omega*T)) * Re int_0^inf dt e^{i omega t} C_tilde(t)
@@ -301,11 +337,11 @@ def kappa_regular_from_ctilde(times, c_tilde, temperature, omegas):
 
     kappa_reg = np.zeros_like(omegas)
     for idx, omega in enumerate(omegas):
-        kernel = np.exp(1.0j * omega * times)
+        kernel = np.cos(omega * times)
         if hasattr(np, "trapezoid"):
-            integral = np.trapezoid(c_win * kernel, times).real
+            integral = 2.0 * np.trapezoid(c_win * kernel, times)
         else:
-            integral = np.trapz(c_win * kernel, times).real
+            integral = 2.0 * np.trapz(c_win * kernel, times)
         if np.isclose(omega, 0.0):
             prefactor = 1.0 / (temperature * temperature)
         else:
@@ -350,6 +386,8 @@ def main():
     d_th_all = []
     kappa_reg_all = []
     kappa_reg_dc_all = []
+    c_th_all = []
+    s_ent_all = []
     times_ref = None
     sweep_t0 = time.time()
     n_temp = len(temperatures)
@@ -357,9 +395,11 @@ def main():
     for idx, (temp, beta) in enumerate(zip(temperatures, betas), start=1):
         temp_t0 = time.time()
         print(f"[{idx}/{n_temp}] T={temp:.4f}, beta={beta:.4f}")
-        times, c_th = compute_correlator(H_model, J_model, beta)
+        times, c_th, s_ent = compute_correlator(H_model, J_model, beta)
         if times_ref is None:
             times_ref = times
+        c_th_all.append(c_th)
+        s_ent_all.append(s_ent)
 
         d_th = estimate_drude_weight(c_th, temp)  # Eq. (4)
         c_tilde = c_th - 2.0 * temp * temp * d_th
@@ -381,6 +421,8 @@ def main():
     d_th_all = np.array(d_th_all)
     kappa_reg_all = np.array(kappa_reg_all)
     kappa_reg_dc_all = np.array(kappa_reg_dc_all)
+    c_th_all = np.array(c_th_all)
+    s_ent_all = np.array(s_ent_all)
 
     # Eq. (1): Re kappa(omega) = 2 pi D_th delta(omega) + kappa_reg(omega)
     # For plotting only, represent delta by a Lorentzian with width eta.
@@ -393,7 +435,8 @@ def main():
     # A finite visual proxy for "full conductivity on top of regular part" at omega=0
     kappa_full_dc_visual = kappa_reg_dc_all + 2.0 * d_th_all / DELTA_BROADENING_ETA
 
-    fig, axes = plt.subplots(1, 3, figsize=(18, 5.2))
+    fig, axes = plt.subplots(2, 3, figsize=(18, 10))
+    axes = axes.ravel()
 
     # Panel 1: contour kappa_reg(omega, T), or line if only one temperature
     if kappa_reg_all.shape[0] >= 2 and kappa_reg_all.shape[1] >= 2:
@@ -430,6 +473,27 @@ def main():
     axes[2].set_title(r"Regular + full conductivity (Eq. 1)")
     axes[2].grid(alpha=0.3)
     axes[2].legend(fontsize=8)
+
+    # Panel 4: C_th(t) at representative temperature
+    c_th_pick = c_th_all[t_pick_idx]
+    axes[3].plot(times_ref, c_th_pick, lw=2, label=rf"$C_{{\rm th}}(t)$ at $T={t_pick:.2f}$")
+    axes[3].set_xlabel(r"$t$")
+    axes[3].set_ylabel(r"$C_{\mathrm{th}}(t)$")
+    axes[3].set_title(r"Current correlator vs time")
+    axes[3].grid(alpha=0.3)
+    axes[3].legend(fontsize=8)
+
+    # Panel 5: entanglement growth vs time (left branch)
+    s_ent_pick = s_ent_all[t_pick_idx]
+    axes[4].plot(times_ref, s_ent_pick, lw=2, label=rf"$S_{{\rm ent}}(t)$ at $T={t_pick:.2f}$")
+    axes[4].set_xlabel(r"$t$")
+    axes[4].set_ylabel(r"$S_{\mathrm{ent}}(t)$")
+    axes[4].set_title(r"Entanglement growth")
+    axes[4].grid(alpha=0.3)
+    axes[4].legend(fontsize=8)
+
+    # Panel 6 unused
+    axes[5].axis("off")
 
     plt.tight_layout()
     plt.savefig(OUTFIG, dpi=220, bbox_inches="tight")

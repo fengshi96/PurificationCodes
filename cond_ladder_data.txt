@@ -1,0 +1,7 @@
+# Kitaev ladder thermal conductivity from current-current correlators
+# Lx=11, N_sites=22, J_K=-1.0, h=0.0, bc=open, order=default
+# dt_imag=0.02, dt_real=0.02, N_steps_real=200, chi_max=30
+# omega_max=8.0, N_omega=250, eta=0.15
+# site_refs=[2, 6, 10, 14]
+# Columns: T | D_th(Eq4) | kappa_reg(omega=0) | kappa_full_dc_visual
+5.000000000000000000e-01 2.456673919273476147e-09 -1.232140712066621824e-08 2.043424513631346704e-08
